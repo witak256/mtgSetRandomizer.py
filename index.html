@@ -41,10 +41,10 @@
 
   <p>Enter set codes separated by commas, spaces, or new lines:</p>
 
-  <textarea id="setCodes">khm, neo, dmu</textarea>
+  <label for="setCodes"></label><textarea id="setCodes">khm, neo, dmu</textarea>
 
   <div>
-    <select id="setDropdown">
+    <label for="setDropdown"></label><select id="setDropdown">
       <option>Loading sets...</option>
     </select>
 
@@ -71,6 +71,78 @@
     const info = document.getElementById("info");
 
     let dropdownSetsByDisplayName = {};
+    const setDataCache = new Map();
+
+   async function fetchSetData(setCode) {
+    const normalizedCode = setCode.toLowerCase();
+
+    if (setDataCache.has(normalizedCode)) {
+      return setDataCache.get(normalizedCode);
+    }
+
+    const response = await fetch(
+      `https://api.scryfall.com/sets/${normalizedCode}`,
+      {
+        headers: {
+          "Accept": "application/json"
+        }
+      }
+    );
+
+    if (response.status === 404) {
+      throw new Error(`Set code not found: ${normalizedCode.toUpperCase()}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch set data for ${normalizedCode.toUpperCase()}.`);
+    }
+
+    const setData = await response.json();
+
+    if (!setData.icon_svg_uri) {
+      throw new Error(`No icon found for ${normalizedCode.toUpperCase()}.`);
+    }
+
+    setDataCache.set(normalizedCode, setData);
+    return setData;
+  }
+
+  function showSetIcon(setData) {
+    setIcon.src = setData.icon_svg_uri;
+    setIcon.alt = `${setData.name} icon`;
+    setIcon.style.display = "inline-block";
+
+    info.innerHTML = `
+      ${setData.name}<br>
+      Code: ${setData.code.toUpperCase()}
+    `;
+  }
+
+  function wait(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+  }
+
+  async function animateSetIconCycle(cycleSetData, finalSetData) {
+    const animationSteps = 24;
+
+    setIcon.style.display = "inline-block";
+
+    for (let step = 0; step < animationSteps; step++) {
+      const randomIndex = Math.floor(Math.random() * cycleSetData.length);
+      const currentSetData = cycleSetData[randomIndex];
+
+      setIcon.src = currentSetData.icon_svg_uri;
+      setIcon.alt = `${currentSetData.name} icon`;
+      info.textContent = "Choosing set...";
+
+      const progress = step / animationSteps;
+      const delay = 40 + progress * progress * 220;
+
+      await wait(delay);
+    }
+
+    showSetIcon(finalSetData);
+  }
 
     async function loadAvailableSets() {
       try {
@@ -81,10 +153,10 @@
         });
 
         if (!response.ok) {
-          throw new Error("Failed to load sets.");
+            throw new Error("Failed to load sets.");
         }
 
-        const data = await response.json();
+          const data = await response.json();
 
         const availableSets = data.data
           .filter(set => allowedSetTypes.has(set.set_type))
@@ -163,26 +235,46 @@
     });
 
     randomButton.addEventListener("click", async () => {
-      const randomSetCode = getRandomSetCodeFromInput();
+    const validSetCodes = getValidSetCodes();
 
-      if (!randomSetCode) {
-        return;
-      }
+    if (validSetCodes.length === 0) {
+      alert(
+        "Please enter at least one valid set code.\n\n" +
+        "Examples: khm, neo, dmu, 40k"
+      );
+      return;
+    }
 
-      randomButton.disabled = true;
-      info.textContent = "Loading...";
+    const randomIndex = Math.floor(Math.random() * validSetCodes.length);
+    const randomSetCode = validSetCodes[randomIndex];
+
+    randomButton.disabled = true;
+    info.textContent = "Loading icons...";
+    setIcon.style.display = "none";
+    setIcon.removeAttribute("src");
+
+    try {
+      const uniqueSetCodes = [...new Set(validSetCodes)];
+
+      const loadedSets = await Promise.all(
+        uniqueSetCodes.map(code => fetchSetData(code))
+      );
+
+      const finalSetData = await fetchSetData(randomSetCode);
+
+      await animateSetIconCycle(loadedSets, finalSetData);
+    } catch (error) {
+      alert(`Something went wrong:\n${error.message}`);
+      info.textContent = "Enter set codes, then click the button";
       setIcon.style.display = "none";
       setIcon.removeAttribute("src");
+    } finally {
+      randomButton.disabled = false;
+    }
+  });
 
-      try {
-        const response = await fetch(
-          `https://api.scryfall.com/sets/${randomSetCode}`,
-          {
-            headers: {
-              "Accept": "application/json"
-            }
-          }
-        );
+  loadAvailableSets();
+</script>
 
         if (response.status === 404) {
           throw new Error("Set code not found. Please check the code and try again.");
@@ -204,17 +296,16 @@
 
         info.innerHTML = `
           ${setData.name}<br>
-          Code: ${setData.code.toUpperCase()}
-        `;
-      } catch (error) {
-        alert(`Something went wrong:\n${error.message}`);
-        info.textContent = "Enter set codes, then click the button";
-      } finally {
-        randomButton.disabled = false;
-      }
-    });
+  Code: ${setData.code.toUpperCase()}
+  `;
+  } catch (error) {
+  alert(`Something went wrong:\n${error.message}`);
+  info.textContent = "Enter set codes, then click the button";
+  } finally {
+  randomButton.disabled = false;
+  }
+  });
 
-    loadAvailableSets();
-  </script>
+  loadAvailableSets();
 </body>
 </html>
