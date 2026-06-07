@@ -230,10 +230,6 @@
       }
     });
 
-    clearButton.addEventListener("click", () => {
-      setCodesText.value = "";
-    });
-
     randomButton.addEventListener("click", async () => {
     const validSetCodes = getValidSetCodes();
 
@@ -275,38 +271,5 @@
 
   loadAvailableSets();
 </script>
-
-        if (response.status === 404) {
-          throw new Error("Set code not found. Please check the code and try again.");
-        }
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch set data.");
-        }
-
-        const setData = await response.json();
-
-        if (!setData.icon_svg_uri) {
-          throw new Error("No icon found for this set.");
-        }
-
-        setIcon.src = setData.icon_svg_uri;
-        setIcon.alt = `${setData.name} icon`;
-        setIcon.style.display = "inline-block";
-
-        info.innerHTML = `
-          ${setData.name}<br>
-  Code: ${setData.code.toUpperCase()}
-  `;
-  } catch (error) {
-  alert(`Something went wrong:\n${error.message}`);
-  info.textContent = "Enter set codes, then click the button";
-  } finally {
-  randomButton.disabled = false;
-  }
-  });
-
-  loadAvailableSets();
-  </sript>
 </body>
 </html>
