@@ -52,6 +52,12 @@
     <button id="clearButton">Clear List</button>
   </div>
 
+  <div>
+        <label>
+          <input type="checkbox" id="removeSelectedSetCheckbox" />
+          Remove selected set after randomizing
+        </label>
+      </div>
   <button id="randomButton">Get Random Set Icon</button>
 
   <div>
@@ -207,6 +213,12 @@
       const randomIndex = Math.floor(Math.random() * validSetCodes.length);
       return validSetCodes[randomIndex];
     }
+    function removeSetCodeFromInput(setCodeToRemove) {
+          const remainingCodes = getValidSetCodes()
+            .filter(code => code !== setCodeToRemove.toLowerCase());
+
+          setCodesText.value = remainingCodes.join(", ");
+        }
 
     addSetButton.addEventListener("click", () => {
       const selectedDisplayName = setDropdown.value;
@@ -263,6 +275,9 @@
       const finalSetData = await fetchSetData(randomSetCode);
 
       await animateSetIconCycle(loadedSets, finalSetData);
+      if (removeSelectedSetCheckbox.checked) {
+            removeSetCodeFromInput(randomSetCode);
+          }
     } catch (error) {
       alert(`Something went wrong:\n${error.message}`);
       info.textContent = "Enter set codes, then click the button";
