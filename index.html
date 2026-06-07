@@ -230,6 +230,10 @@
       }
     });
 
+   clearButton.addEventListener("click", () => {
+      setCodesText.value = "";
+    });
+
     randomButton.addEventListener("click", async () => {
     const validSetCodes = getValidSetCodes();
 
